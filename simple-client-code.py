@@ -1,9 +1,10 @@
 
-from socket import *    # imported so I can program with sockets
+from socket import *    # imported to program with sockets
 import argparse         # imported so arguments can be parsed
 import sys              # imported so program can be terminated
 
 
+# Beginning of main()
 
 def main():
 
@@ -44,6 +45,8 @@ def main():
 # End of main()    
 
 
+
+# Beginning of argumentParser()
 
 def argumentParser():
 
@@ -87,6 +90,8 @@ def argumentParser():
 # End of argumentParser()
 
 
+
+# Beginning of httpMessageHandler()
 
 def httpMessageHandler(serverIP, serverPort, requestFile):
 
@@ -152,9 +157,11 @@ def httpMessageHandler(serverIP, serverPort, requestFile):
         clientSocket.close()
         sys.exit()
 
-# End of connectionHandler
+# End of connectionHandler()
 
 
+
+# Beginning of httpGETWriter()
 
 def  httpGETWriter(serverIP, serverPort, requestFile): 
 
@@ -177,7 +184,7 @@ def  httpGETWriter(serverIP, serverPort, requestFile):
     
     return httpRequestMessage
 
-# End of httpGETWriter
+# End of httpGETWriter()
 
 
 

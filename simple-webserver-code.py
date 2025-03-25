@@ -1,55 +1,108 @@
 
-from socket import *    # imported so I can program with sockets
-import sys              # imported so program can be terminated
+from socket import *    # imported for socket programming
 
 
+# Beginning of main()
 
 def main():
 
     """
         Description:
-        The main method. It creates and initializes a socket that will listen to one connection.
-        Closes the socket when connectionHandler() function is finished 
+        The main method. It runs serverHandler() function with self defined arguments 
     """
+  
 
-
-    # Creates a TCP socket with IPv4 as underlying network
-    serverSocket = socket(AF_INET, SOCK_STREAM)  
-
-    # Binds serverSocket to given port number and IP address
-    serverPort = 6969
+    # Runs serverHandler with defined port number and IP address
     serverIP = '127.0.0.1'
-    serverSocket.bind((serverIP, serverPort))
-
-    # ServerSocket will only handle one connection at a time
-    serverSocket.listen(1)
-    # Status message for console 
-    print(f'Server is ready to receive on server port {serverPort}...')
-
-
-    # Runs connectionHandler() function with serverSocket as parameter
-    connectionHandler(serverSocket) 
-
-
-    # Connection is finished
-    # Status message for console 
-    print(f'Closing server socket on port {serverPort}...')
-    # Closes serverSocket and terminates this program
-    serverSocket.close()
-    sys.exit()
+    serverPort = 6969
+    serverHandler(serverIP, serverPort)
 
 # End of main()
 
 
 
-def connectionHandler(serverSocket):
+# Beginning of serverHandler()
+
+def serverHandler(serverIP, serverPort):
+
+    """
+        Description:
+        Creates a server socket and binds it to provided arguments 
+        Server socket can handle one connection at a time
+        Runs an infinite loop so other clients can connect if a client disconnects
+        
+        Infinite loop be interrupted by user or raised IOError, 
+        in which case, all sockets will close and function will end
+
+        Arguments:
+        serverIP:   identifier of server
+        serverPort: port number to be attached to server socket
+    """
+
+
+    # Creates a TCP socket with IPv4 as underlying network
+    serverSocket = socket(AF_INET, SOCK_STREAM)
+
+    # Binds serverSocket to given port number and IP address
+    serverSocket.bind((serverIP, serverPort))
+
+    # ServerSocket will only handle one connection at a time
+    serverSocket.listen(1)
+    # Status message for console 
+    print(f'Server is ready to receive on port {serverPort}...')
+
+
+    # Will attempt to establish connection with client
+    try:
+
+        # Infinite loop so other clients can connect if client disconnects
+        while True:    
+            # Accepts connection from a client by creating a socket for this connection
+            # Also saves client IP and port number
+            connectionSocket, clientAddress = serverSocket.accept()
+            # Status message for console
+            print(f'Connection established with {clientAddress[0]} on client port {clientAddress[1]}')
+
+
+            # Runs connectionHandler() function with serverSocket as parameter
+            connectionHandler(connectionSocket) 
+
+
+    # In case of user interrupting server, infinite loop is exited
+    except KeyboardInterrupt:
+        # Status message for console
+        print('Received order to close server')
+
+
+    # In case of IOError being raised, infinite loop is exited
+    except IOError:
+        # Status message for console
+        print('Internal error, closing server')
+
+
+    # Always executed after infinite loop is exited
+    finally:
+        # Status message for console 
+        print(f'Closing server socket on port {serverPort}...')
+        # Closes connectionSocket and serverSocket
+        connectionSocket.close()
+        serverSocket.close()
+
+# End of serverHandler()
+
+
+
+# Beginning of connectionHandler()
+
+def connectionHandler(connectionSocket):
 
     """
         Description:
         function that handles connections. 
         Runs an infinite while loop that receives HTTP requests from- and sends HTTP response messages to client
         
-        In case of error, function is stopped and an appropriate HTTP response message sent to client
+        In case of error, an appropriate HTTP response message sent to client
+        All errors except for FileNotFoundError will raise IOError for serverHandler() to catch
 
         If index.html is requested, said file is sent in an HTTP response message with "200 OK" as status
         If unknown file is requested, an HTTP response message with "404 Not Found" as status is sent
@@ -58,7 +111,7 @@ def connectionHandler(serverSocket):
         Argument:
         serverSocket: A TCP socket with IPv4 as underlying network that can listen to one connection at a time
     """
-
+    
 
     while True:     # Infinite loop to ensure index.html can be requested several times
         
@@ -66,42 +119,33 @@ def connectionHandler(serverSocket):
         # Sends HTTP response with "200 OK" as status and index.html as data to client
         try: 
 
-            # Accepts connection from a client by creating a socket for this connection
-            # Also saves client IP and port number
-            connectionSocket, clientAddress = serverSocket.accept()
-            # Status message for console
-            print(f'Connection established with {clientAddress[0]} on client port {clientAddress[1]}')
-
             # Waits for client to send HTTP GET request
             httpRequestMessage = connectionSocket.recv(1024).decode()
-            # Status message for console
-            print("Message received")
             
-            # Handles connectionSocket.recv() returning blank String
+            # Handles connectionSocket.recv() returning blank
             if not httpRequestMessage:
 
                 # Status message for console
-                print("Received empty message, closing connection...")
-                # Closes connection and goes to next iteration of loop
+                print("Client has closed connection, closing connection socket...")
+                # Closes connection and breaks the infinite loop
                 connectionSocket.close()
-                continue
+                break
             
+            # Status message for console
+            print("Message received")
             
             # Attempts to retreive data requested file, 
             # then write HTTP response message with status of 200 OK
-            data = httpGETRetreiver(httpRequestMessage)             # data from requested file
-            status = "200 OK"                                       # HTTP status
-            httpResponseMessage = httpResponseWriter(status, data)  # HTTP response message
+            data = httpGETData(httpRequestMessage)                              # Data from requested file
+            connection = httpConnectionStatus(httpRequestMessage)               # Connection status from HTTP request message
+            status = "200 OK"                                                   # HTTP status
+            httpResponseMessage = httpResponseWriter(status, connection, data)  # HTTP response message
 
 
             # Sends HTTP response to client
             connectionSocket.send(httpResponseMessage.encode())
-
             # Status message for console
-            print('Requested file sent, closing connection...')
-            # Closes connectionSocket so that files can be requested from other client ports or even IP's
-            connectionSocket.close()
-
+            print('Requested file sent')
 
 
         # Handles exception if other file than index.html is being requested
@@ -109,30 +153,27 @@ def connectionHandler(serverSocket):
         except FileNotFoundError:
 
             # writes HTTP response message with "404 Not Found" as status
-            status = '404 Not Found'                                # HTTP status
-            data = '<h1>File not found<h1>'                         # Very simple HTML data
-            httpResponseMessage = httpResponseWriter(status, data)  # HTTP response message
+            status = '404 Not Found'                                            # HTTP status
+            connection = httpConnectionStatus(httpRequestMessage)               # Connection status from HTTP request message
+            data = '<h1>File not found<h1>'                                     # Very simple HTML data
+            httpResponseMessage = httpResponseWriter(status, connection, data)  # HTTP response message
             
 
             # Sends HTTP response to client
             connectionSocket.send(httpResponseMessage.encode())
-
             # Status message for console
-            print('Requested file not found, closing connection...')
-            # Closes connection and breaks the infinite loop
-            connectionSocket.close()
-            break
+            print('Requested file not found, appropriate response message sent')
 
         
-
         # Handles any other exception
-        # Sends HTTP response with "500 Internal Server" as status to client
+        # Sends HTTP response with "500 Internal Server" as status to client and closes connection
         except Exception as error:
 
             # writes HTTP response message with "500 Internal Server Error" as status
-            status = '500 Internal Server Error'                    # HTTP status
-            data = '<h1>Oh no<h1>'                                  # very simple HTML data 
-            httpResponseMessage = httpResponseWriter(status, data)  # HTTP response message
+            status = '500 Internal Server Error'                                # HTTP status
+            connection = 'close'                                                # Close the connection
+            data = '<h1>Oh no<h1>'                                              # very simple HTML data 
+            httpResponseMessage = httpResponseWriter(status, connection, data)  # HTTP response message
             
 
             # Sends HTTP response to client
@@ -140,20 +181,22 @@ def connectionHandler(serverSocket):
 
             # Error and status message for console
             print(f'An error has occured: {error}\n' \
-                  'closing connection...')          
+                  'appropriate response message sent, closing connection socket...')          
             # Closes connection and breaks the infinite loop
             connectionSocket.close()
-            break
+            raise IOError()
 
-# End of connectionHandler
+# End of connectionHandler()
 
 
 
-def httpGETRetreiver(httpRequestMessage):
+# Beginning of httpGETData()
+
+def httpGETData(httpRequestMessage):
 
     """
         Description:
-        Handles HTTP GET requests by retreiving data from requested file.
+        Retrieves data from file requested by HTTP GET request message.
         File must exist for function to work
 
         Argument:
@@ -182,14 +225,56 @@ def httpGETRetreiver(httpRequestMessage):
         # Opens file and attempts to read its contents to variable, data
         with open(requestedFilename[1:]) as requestedFile:
             data = requestedFile.read()
-    
+
     return data
 
-# End of dataRetreival
+# End of httpGETData()
 
 
 
-def httpResponseWriter(status, data):
+# Beginning of httpConnectionStatus()
+
+def httpConnectionStatus(httpRequestMessage):
+
+    """
+        Description:
+        Sets connection status based on provided HTTP request message's connection status
+
+        Argument:
+        httpRequestMessage: An HTTP request message
+
+        Returns:
+        connectionStatus: Connection status indicated in HTTP request message
+                          Set to 'close' if "Connection" field is not in HTTP request message 
+    """
+
+    
+    # connectionStatus, set to 'close' by default
+    connectionStatus = 'close'
+    
+    # splits httpRequestMessage with '\r\n' as seperator, 
+    # this will generate an array containing each field in HTTP request message
+    requestMessageFields = httpRequestMessage.split('\r\n')
+
+    # For loop that iterates through all fields in httpRequestMessage
+    for field in requestMessageFields:
+        
+        # Looks for "Connection" field, by matching start of string with 'Connection:'
+        if field.startswith('Connection:'):
+            # Character 12 and onwards in "Connection" field contains connection status
+            connectionStatus = field[12:]
+            # Preemtively breaks for loop
+            break
+    
+    return connectionStatus
+
+# End of httpConnectionStatus
+
+
+
+# Beginning of httpResponseWriter()
+
+def httpResponseWriter(status, connection, data):
 
     """
         Description:
@@ -197,8 +282,9 @@ def httpResponseWriter(status, data):
         Inclueded fields in HTTP response message are: Content-Length, Connection and Content-Type
 
         Arguments:
-        status: Contains status code and phrase for the HTTP response message
-        data: HTTP response message's attached data
+        status:     Contains status code and phrase for the HTTP response message
+        data:       HTTP response message's attached data
+        connection: Decides if client stays connected, is either "keep-alive" or "close"
         
         Returns:
         httpResponseMessage: Fully written HTTP response message in the form of a string    
@@ -208,14 +294,14 @@ def httpResponseWriter(status, data):
     # Writes the HTTP response message
     httpResponseMessage = f'HTTP/1.1 {status}\r\n' \
                           f'Content-Length: {len(data)}\r\n' \
-                          'Connection: close\r\n' \
+                          f'Connection: {connection}\r\n' \
                           'Content-Type: text/html; charset=UTF-8\r\n' \
                           '\r\n' \
                           f'{data}'
     
     return httpResponseMessage
 
-# End of httpResponseWriter
+# End of httpResponseWriter()
 
 
 
