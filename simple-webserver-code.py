@@ -1,6 +1,6 @@
 
-import sys
-from socket import *
+from socket import *    # imported to program with sockets
+import sys              # imported so program can be terminated
 
 
 def main():
