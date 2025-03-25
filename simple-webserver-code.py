@@ -48,6 +48,8 @@ def connectionHandler(serverSocket):
         Description:
         function that handles connections. 
         Runs an infinite while loop that receives HTTP requests from- and sends HTTP response messages to client
+        
+        In case of error, function is stopped and an appropriate HTTP response message sent to client
 
         If index.html is requested, said file is sent in an HTTP response message with "200 OK" as status
         If unknown file is requested, an HTTP response message with "404 Not Found" as status is sent
@@ -55,7 +57,6 @@ def connectionHandler(serverSocket):
 
         Argument:
         serverSocket: A TCP socket with IPv4 as underlying network that can listen to one connection at a time
-    
     """
 
 
@@ -159,7 +160,7 @@ def httpGETRetreiver(httpRequestMessage):
         httpRequestMessage: An HTTP GET request message asking for specific file
 
         Returns:
-        Function returns data from requested file in the form of a string    
+        data: Data from requested file in the form of a string    
     """
 
 
@@ -200,7 +201,7 @@ def httpResponseWriter(status, data):
         data: HTTP response message's attached data
         
         Returns:
-        Function returns fully written HTTP response message as a string    
+        httpResponseMessage: Fully written HTTP response message in the form of a string    
     """
 
 
