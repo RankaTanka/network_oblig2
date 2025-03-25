@@ -1,6 +1,7 @@
 
-from socket import *    # imported to program with sockets
+from socket import *    # imported so I can program with sockets
 import sys              # imported so program can be terminated
+
 
 
 def main():
@@ -9,7 +10,6 @@ def main():
         Description:
         The main method. It creates and initializes a socket that will listen to one connection.
         Closes the socket when connectionHandler() function is finished 
-    
     """
 
 
@@ -23,7 +23,7 @@ def main():
 
     # ServerSocket will only handle one connection at a time
     serverSocket.listen(1)
-    # Prints a server status message to console 
+    # Status message for console 
     print(f'Server is ready to receive on server port {serverPort}...')
 
 
@@ -32,9 +32,14 @@ def main():
 
 
     # Connection is finished
+    # Status message for console 
+    print(f'Closing server socket on port {serverPort}...')
     # Closes serverSocket and terminates this program
     serverSocket.close()
     sys.exit()
+
+# End of main()
+
 
 
 def connectionHandler(serverSocket):
@@ -42,10 +47,10 @@ def connectionHandler(serverSocket):
     """
         Description:
         function that handles connections. 
-        Runs an infinite while loop that sends HTTP response messages from HTTP GET requests
+        Runs an infinite while loop that receives HTTP requests from- and sends HTTP response messages to client
 
         If index.html is requested, said file is sent in an HTTP response message with "200 OK" as status
-        If other file than index.html is requested, an HTTP response message with "404 Not Found" as status is sent
+        If unknown file is requested, an HTTP response message with "404 Not Found" as status is sent
         If an exception occurs, an HTTP response message with "500 Internal Server Error" as status is sent
 
         Argument:
@@ -63,108 +68,155 @@ def connectionHandler(serverSocket):
             # Accepts connection from a client by creating a socket for this connection
             # Also saves client IP and port number
             connectionSocket, clientAddress = serverSocket.accept()
-            # Prints status message to console
+            # Status message for console
             print(f'Connection established with {clientAddress[0]} on client port {clientAddress[1]}')
 
             # Waits for client to send HTTP GET request
             httpRequestMessage = connectionSocket.recv(1024).decode()
+            # Status message for console
+            print("Message received")
             
             # Handles connectionSocket.recv() returning blank String
             if not httpRequestMessage:
 
-                # Prints status message to console
-                print("Received empty message, reestablishing connection...")
+                # Status message for console
+                print("Received empty message, closing connection...")
                 # Closes connection and goes to next iteration of loop
                 connectionSocket.close()
                 continue
             
             
-            # received HTTP GET request should be formatted like this: "GET /file ..."
-            # Word on index 1 of request String should therefore be the requested file
-            requestedFilename = httpRequestMessage.split()[1]
+            # Attempts to retreive data requested file, 
+            # then write HTTP response message with status of 200 OK
+            data = httpGETRetreiver(httpRequestMessage)             # data from requested file
+            status = "200 OK"                                       # HTTP status
+            httpResponseMessage = httpResponseWriter(status, data)  # HTTP response message
 
-            # if-statement that handles HTTP GET request for index.html
-            if requestedFilename == '/':    # "/" is a request for index.html
-
-                # opens index.html and reads its contents to variable, data
-                with open('index.html') as requestedFile:
-                    data = requestedFile.read()
-
-            else:   # handles GET requests for explicit file, only works for index.html
-
-                # requestedFilename should start with "/", 
-                # therefore characters from index 1 and onwards should be requested file
-                # Opens requested file and attempts to read its contents to variable, data
-                with open(requestedFilename[1:]) as requestedFile:
-                    data = requestedFile.read()
-
-
-            # HTTP response, included fields are: Content-Length, Connection and Content-Type
-            httpResponseMessage = 'HTTP/1.1 200 OK\r\n' \
-                                  f'Content-Length: {len(data)}\r\n' \
-                                  'Connection: close\r\n' \
-                                  'Content-Type: text/html; charset=UTF-8\r\n' \
-                                  '\r\n' \
-                                  f'{data}'
 
             # Sends HTTP response to client
             connectionSocket.send(httpResponseMessage.encode())
 
-
+            # Status message for console
+            print('Requested file sent, closing connection...')
             # Closes connectionSocket so that files can be requested from other client ports or even IP's
             connectionSocket.close()
+
 
 
         # Handles exception if other file than index.html is being requested
         # Sends HTTP response with "404 Not Found" as status to client
         except FileNotFoundError:
 
-            data = '<h1>404 Not Found<h1>'  # very simple HTML data
-            # HTTP response, included fields are: Content-Length, Connection and Content-Type
-            httpResponseMessage = 'HTTP/1.1 404 Not Found\r\n' \
-                                  f'Content-Length: {len(data)}\r\n' \
-                                  'Connection: close\r\n' \
-                                  'Content-Type: text/html\r\n' \
-                                  '\r\n' \
-                                  f'{data}'
+            # writes HTTP response message with "404 Not Found" as status
+            status = '404 Not Found'                                # HTTP status
+            data = '<h1>File not found<h1>'                         # Very simple HTML data
+            httpResponseMessage = httpResponseWriter(status, data)  # HTTP response message
             
+
             # Sends HTTP response to client
             connectionSocket.send(httpResponseMessage.encode())
 
-
-            # Prints error and status message to console
+            # Status message for console
             print('Requested file not found, closing connection...')
             # Closes connection and breaks the infinite loop
             connectionSocket.close()
             break
 
         
+
         # Handles any other exception
         # Sends HTTP response with "500 Internal Server" as status to client
         except Exception as error:
 
-            data = '<h1>Oh no<h1>'  # very simple HTML data 
-            # HTTP response, included fields are: Content-Length, Connection and Content-Type
-            httpResponseMessage = 'HTTP/1.1 500 Internal Server Error\r\n' \
-                                  f'Content-Length: {len(data)}\r\n' \
-                                  'Connection: close\r\n' \
-                                  'Content-Type: text/html\r\n' \
-                                  '\r\n' \
-                                  f'{data}'
+            # writes HTTP response message with "500 Internal Server Error" as status
+            status = '500 Internal Server Error'                    # HTTP status
+            data = '<h1>Oh no<h1>'                                  # very simple HTML data 
+            httpResponseMessage = httpResponseWriter(status, data)  # HTTP response message
             
+
             # Sends HTTP response to client
             connectionSocket.send(httpResponseMessage.encode())
 
-
-            # Prints error and status message to console
+            # Error and status message for console
             print(f'An error has occured: {error}\n' \
                   'closing connection...')          
             # Closes connection and breaks the infinite loop
             connectionSocket.close()
             break
 
+# End of connectionHandler
 
+
+
+def httpGETRetreiver(httpRequestMessage):
+
+    """
+        Description:
+        Handles HTTP GET requests by retreiving data from requested file.
+        File must exist for function to work
+
+        Argument:
+        httpRequestMessage: An HTTP GET request message asking for specific file
+
+        Returns:
+        Function returns data from requested file in the form of a string    
+    """
+
+
+    # received HTTP GET request should be formatted like this: "GET /file ..."
+    # Word on index 1 of request String should therefore be the requested file
+    requestedFilename = httpRequestMessage.split()[1]
+
+    # if-statement that retreives data from requested file
+    if requestedFilename == '/':    # "/" is a request for index.html
+
+        # opens index.html and reads its contents to variable, data
+        with open('index.html') as requestedFile:
+            data = requestedFile.read()
+
+    else:   # handles requests for explicit file
+
+        # requestedFilename should start with "/", 
+        # therefore characters from index 1 and onwards should be requested file
+        # Opens file and attempts to read its contents to variable, data
+        with open(requestedFilename[1:]) as requestedFile:
+            data = requestedFile.read()
     
+    return data
+
+# End of dataRetreival
+
+
+
+def httpResponseWriter(status, data):
+
+    """
+        Description:
+        Writes HTTP response message with provided status and data.
+        Inclueded fields in HTTP response message are: Content-Length, Connection and Content-Type
+
+        Arguments:
+        status: Contains status code and phrase for the HTTP response message
+        data: HTTP response message's attached data
+        
+        Returns:
+        Function returns fully written HTTP response message as a string    
+    """
+
+
+    # Writes the HTTP response message
+    httpResponseMessage = f'HTTP/1.1 {status}\r\n' \
+                          f'Content-Length: {len(data)}\r\n' \
+                          'Connection: close\r\n' \
+                          'Content-Type: text/html; charset=UTF-8\r\n' \
+                          '\r\n' \
+                          f'{data}'
+    
+    return httpResponseMessage
+
+# End of httpResponseWriter
+
+
 
 if __name__ == '__main__':  # runs the main method
     main()
