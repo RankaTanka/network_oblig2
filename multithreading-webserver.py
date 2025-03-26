@@ -1,4 +1,9 @@
 
+"""
+    This code was copied from webserver.py
+    The only changes are an import and added lines to serverHandler() function
+"""
+
 from socket import *    # imported for socket programming
 import threading        # imported for multithreading
 
