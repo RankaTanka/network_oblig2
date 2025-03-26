@@ -86,7 +86,7 @@ def argumentParser():
         file = ''
     # if argument.file is not empty, file argument is retreived
     else:                       
-        file = arguments.file[0]
+        file = arguments.file
 
     return ip, port, file
 
@@ -131,7 +131,7 @@ def httpMessageHandler(serverIP, serverPort, requestFile):
         # HTTP GET request message
         httpRequestMessage = httpGETWriter(serverIP, serverPort, requestFile)
         
-
+        
         # Status message for console 
         print('Sending HTTP request message to server...')
         # Sends HTTP GET request message through clientSocket to server
@@ -178,7 +178,7 @@ def  httpGETWriter(serverIP, serverPort, requestFile):
     """
 
     # If requestFile starts with "/" it is removed
-    if requestFile != '' and requestFile[0] == '/': requestFile = requestFile[1:]
+    if requestFile != '' and requestFile.startswith('/'): requestFile = requestFile[1:]
     # Writes the HTTP GET request message
     httpRequestMessage = f'GET /{requestFile} HTTP/1.1\r\n' \
                          f'Host: {serverIP}:{serverPort}\r\n' \
