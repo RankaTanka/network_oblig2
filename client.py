@@ -28,19 +28,14 @@ def main():
         print(f'HTTP response message received:\n' \
               f'{httpResponseMessage}')
 
-        # Terminates program
-        sys.exit()
-
 
     # Handles exceptions
-    # Prints error message to console and terminates program
+    # Prints error message to console
     except Exception as error:
 
         # Error and status message for console
         print(f'An error has occured: {error}\n' \
               'exiting program...')  
-        # Terminates program        
-        sys.exit()
 
 # End of main()    
 
