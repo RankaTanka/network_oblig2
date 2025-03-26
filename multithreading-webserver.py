@@ -1,6 +1,6 @@
 
 from socket import *    # imported for socket programming
-import threading        #
+import threading        # imported for multithreading
 
 
 # Beginning of main()
