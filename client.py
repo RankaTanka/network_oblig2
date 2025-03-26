@@ -20,10 +20,10 @@ def main():
     try:
 
         # Saves arguments using argumentParser() function
-        identifier, port, file = argumentParser()
+        ip, port, file = argumentParser()
 
         # Saves an HTTP response message from httpMessageHandler()
-        httpResponseMessage = httpMessageHandler(identifier, port, file)
+        httpResponseMessage = httpMessageHandler(ip, port, file)
         # Prints HTTP response message to console
         print(f'HTTP response message received:\n' \
               f'{httpResponseMessage}')
@@ -55,17 +55,17 @@ def argumentParser():
         Creates an argument parser and retreives provided arguments from it
 
         Returns:
-        identifier: Identifier for server user wants to connect to, an IP address or servername
-        port:       Port number attached to server socket user wants to connect to
-        file:       File user wants to retreive from server
+        ip:   IP-address of server interface
+        port: Port number attached to server socket user wants to connect to
+        file: File user wants to retreive from server
     """
 
     # An argument parser with appropriate description
     parser = argparse.ArgumentParser(description = 'Attempts to connect to a server and send HTTP GET request for file')
     
-    # Argument for identifier. Type is string and only 1 argument is allowed. Is required
-    parser.add_argument('-i', '--identifier', type = str, nargs = 1, required = True,
-                        help = 'Server identifier: IP adress or name of server')
+    # Argument for IP-address. Type is string and only 1 argument is allowed. Is required
+    parser.add_argument('-i', '--ip', type = str, nargs = 1, required = True,
+                        help = 'Server IP-address: IP adress of server interface')
     # Argument for port. Type is int and only 1 argument is allowed. Is required
     parser.add_argument('-p', '--port', type = int, nargs = 1, required = True,
                         help = 'Socket port number: Port number attatched to server socket')
@@ -78,14 +78,17 @@ def argumentParser():
     arguments = parser.parse_args()
 
 
-    identifier = arguments.identifier[0]    # Retreives identifier argument
-    port = arguments.port[0]                # Retreives port argument
-    if not arguments.file:                  # if argument.file is empty, file is set to ''
+    # Stores arguments in variables
+    ip = arguments.ip[0]        # Retreives ip argument
+    port = arguments.port[0]    # Retreives port argument
+    # if argument.file is empty, file is set to ''
+    if not arguments.file:      
         file = ''
-    else:                                   # if argument.file is not empty, file argument is retreived
+    # if argument.file is not empty, file argument is retreived
+    else:                       
         file = arguments.file[0]
 
-    return identifier, port, file
+    return ip, port, file
 
 # End of argumentParser()
 
@@ -97,14 +100,14 @@ def httpMessageHandler(serverIP, serverPort, requestFile):
 
     """
         Description:
-        Connects to webserver using an identifier and a port number
+        Connects to webserver using an IP-address and a port number
         Sends HTTP GET request message to server, requesting a wanted file
         Receives an HTTP response message from server and closes connection
 
         In case of error, connection is closed and program is terminated
 
         Arguments:
-        serverIP:    identifier of server, user wants to connect to
+        serverIP:    IP-address of server, user wants to connect to
         serverPort:  port number attached to server socket, user wants to connect to
         requestFile: file requested from server in HTTP GET request message
 

@@ -1,5 +1,6 @@
 
 from socket import *    # imported for socket programming
+import threading        #
 
 
 # Beginning of main()
@@ -11,7 +12,6 @@ def main():
         The main method. It runs serverHandler() function with self defined arguments 
     """
   
-
     # Runs serverHandler with defined port number and IP address
     serverIP = '127.0.0.1'
     serverPort = 6969
@@ -27,15 +27,14 @@ def serverHandler(serverIP, serverPort):
 
     """
         Description:
-        Creates a server socket and binds it to provided arguments 
-        Server socket can handle one connection at a time
+        Creates a server socket and binds it to provided IP-address and port 
         Runs an infinite loop so other clients can connect if a client disconnects
         
-        Infinite loop be interrupted by user or raised IOError, 
+        Infinite loop can be interrupted by user or raised Exception, 
         in which case, all sockets will close and function will end
 
         Arguments:
-        serverIP:   identifier of server
+        serverIP:   IP-address of server
         serverPort: port number to be attached to server socket
     """
 
@@ -46,7 +45,7 @@ def serverHandler(serverIP, serverPort):
     # Binds serverSocket to given port number and IP address
     serverSocket.bind((serverIP, serverPort))
 
-    # ServerSocket will only handle one connection at a time
+    # ServerSocket can handle five connections at a time
     serverSocket.listen(1)
     # Status message for console 
     print(f'Server is ready to receive on port {serverPort}...')
@@ -64,8 +63,9 @@ def serverHandler(serverIP, serverPort):
             print(f'Connection established with {clientAddress[0]} on client port {clientAddress[1]}')
 
 
-            # Runs connectionHandler() function with serverSocket as parameter
-            connectionHandler(connectionSocket) 
+            # A thread that will run connectionHandler() with connectionSocket as argument
+            thread = threading.Thread(target = connectionHandler, args = (connectionSocket,))
+            thread.start() 
 
 
     # In case of user interrupting server, infinite loop is exited
@@ -74,8 +74,8 @@ def serverHandler(serverIP, serverPort):
         print('Received order to close server')
 
 
-    # In case of IOError being raised, infinite loop is exited
-    except IOError:
+    # In case of Exception being raised, infinite loop is exited
+    except Exception:
         # Status message for console
         print('Internal error, closing server')
 
@@ -100,23 +100,24 @@ def connectionHandler(connectionSocket):
         Description:
         function that handles connections. 
         Runs an infinite while loop that receives HTTP requests from- and sends HTTP response messages to client
+        If client disconnects, infinite loop is broken
         
         In case of error, an appropriate HTTP response message sent to client
-        All errors except for FileNotFoundError will raise IOError for serverHandler() to catch
+        All errors except for FileNotFoundError will raise Exception for serverHandler() to catch
 
         If index.html is requested, said file is sent in an HTTP response message with "200 OK" as status
         If unknown file is requested, an HTTP response message with "404 Not Found" as status is sent
         If an exception occurs, an HTTP response message with "500 Internal Server Error" as status is sent
 
         Argument:
-        serverSocket: A TCP socket with IPv4 as underlying network that can listen to one connection at a time
+        connectionSocket: A TCP socket with IPv4 as underlying network, connected to a client
     """
     
 
-    while True:     # Infinite loop to ensure index.html can be requested several times
+    while True:     # Infinite loop to ensure files can be requested several times
         
-        # Responds to HTTP GET requests if possible. Can only respond to requests for index.html, 
-        # Sends HTTP response with "200 OK" as status and index.html as data to client
+        # Responds to HTTP GET requests if possible.  
+        # Sends HTTP response with "200 OK" as status and file as data to client
         try: 
 
             # Waits for client to send HTTP GET request
@@ -134,8 +135,8 @@ def connectionHandler(connectionSocket):
             # Status message for console
             print("Message received")
             
-            # Attempts to retreive data requested file, 
-            # then write HTTP response message with status of 200 OK
+            # Attempts to retreive data from requested file, 
+            # and then write HTTP response message with status of 200 OK
             data = httpGETData(httpRequestMessage)                              # Data from requested file
             connection = httpConnectionStatus(httpRequestMessage)               # Connection status from HTTP request message
             status = "200 OK"                                                   # HTTP status
@@ -166,7 +167,7 @@ def connectionHandler(connectionSocket):
 
         
         # Handles any other exception
-        # Sends HTTP response with "500 Internal Server" as status to client and closes connection
+        # Sends HTTP response with "500 Internal Server" as status to client and raises Exception
         except Exception as error:
 
             # writes HTTP response message with "500 Internal Server Error" as status
@@ -182,9 +183,9 @@ def connectionHandler(connectionSocket):
             # Error and status message for console
             print(f'An error has occured: {error}\n' \
                   'appropriate response message sent, closing connection socket...')          
-            # Closes connection and breaks the infinite loop
+            # Closes connection and raises Exception
             connectionSocket.close()
-            raise IOError()
+            raise Exception()
 
 # End of connectionHandler()
 
@@ -263,12 +264,12 @@ def httpConnectionStatus(httpRequestMessage):
         if field.startswith('Connection:'):
             # Character 12 and onwards in "Connection" field contains connection status
             connectionStatus = field[12:]
-            # Preemtively breaks for loop
+            # Preemtively breaks loop
             break
     
     return connectionStatus
 
-# End of httpConnectionStatus
+# End of httpConnectionStatus()
 
 
 
